@@ -1,10 +1,22 @@
-const cleanSet = (set, startString) => {
-  if (!startString || startString === '') {
+/**
+ * return a string of all elements of the set starting with startString
+ * separated by -
+ * @param {Set} set
+ * @param {String} startString
+ * @returns {String}
+ */
+export default function cleanSet(set, startString) {
+  if (!set
+    || !startString
+    || !(set instanceof Set)
+    || typeof startString !== 'string'
+    || startString === ''
+  ) {
     return '';
   }
-  const cleanedSet = [...set].filter((val) => val.startsWith(startString));
-  const cleanedString = cleanedSet.map((val) => val.replace(startString, ''));
-  return cleanedString.join('-');
-};
-
-export default cleanSet;
+  let filtered = [...set].filter(
+    (value) => typeof value === 'string' && value.startsWith(startString),
+  );
+  filtered = filtered.map((value) => value.replace(startString, ''));
+  return filtered.join('-');
+}

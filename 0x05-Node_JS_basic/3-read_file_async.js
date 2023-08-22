@@ -1,4 +1,3 @@
-const fs = require('fs').promises;
 
 /**
  * A function that accepts a path to a csv file that contains list of students
@@ -6,32 +5,54 @@ const fs = require('fs').promises;
  * field of study. It reads the file asynchronously.
  * @param {string} path - path to csv file
  */
-async function countStudents(path) {
-  try {
-    const studentData = await fs.readFile(path, 'utf8');
-    const students = studentData
-      .split('\n')
-      .filter((student) => student.length > 0)
-      .map((student) => student.split(','));
 
-    students.shift();
-    console.log(`Number of students: ${students.length}`);
-    const filedOfStudy = {};
-    students.forEach((student) => {
-      if (!filedOfStudy[student[3]]) filedOfStudy[student[3]] = [];
-      filedOfStudy[student[3]].push(student[0]);
-    });
+const path = require('path');
+const fs = require('fs');
 
-    Object.keys(filedOfStudy).forEach((key) => {
-      console.log(
-        `Number of students in ${key}: ${
-          filedOfStudy[key].length
-        }. List: ${filedOfStudy[key].join(', ')}`,
-      );
-    });
-  } catch (error) {
-    throw new Error('Cannot load the database');
-  }
+function countStudents(filename) {
+  const resolvedFilename = path.resolve(filename);
+
+  return new Promise(((resolve, reject) => {
+    if (!fs.existsSync(resolvedFilename)) {
+      reject(new Error('Cannot load the database'));
+    } else {
+      const allFileContents = fs.readFileSync(resolvedFilename, 'utf-8');
+      const lines = allFileContents.split(/\r?\n/);
+      const countDict = {};
+
+      lines.forEach((line) => {
+        const student = line.split(',');
+        const firstname = student[0];
+        const field = student[3];
+
+        if (field === 'CS' || field === 'SWE') {
+          if (field in countDict) {
+            countDict[field].push(firstname);
+          } else {
+            countDict[field] = [firstname];
+          }
+        }
+      });
+
+      // Compute and print total student count
+      let totalStudents = 0;
+      for (const field in countDict) {
+        if (Object.prototype.hasOwnProperty.call(countDict, field)) {
+          const count = countDict[field].length;
+          totalStudents += count;
+        }
+      }
+      console.log(`Number of students: ${totalStudents}`);
+
+      // Print individual counts for each field
+      for (const field in countDict) {
+        if (Object.prototype.hasOwnProperty.call(countDict, field)) {
+          console.log(`Number of students in ${field}: ${countDict[field].length}. List: ${countDict[field].join(', ')}`);
+        }
+      }
+      resolve(countDict); // Resolve the promise with the countDict
+    }
+  }));
 }
 
 module.exports = countStudents;

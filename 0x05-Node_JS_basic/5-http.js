@@ -1,93 +1,59 @@
+const http = require('http');
+const fs = require('fs').promises;
 
 /**
  * A function that accepts a path to a csv file that contains list of students
  * and returns the total count of students and the count of students in each
  * field of study. It reads the file asynchronously.
  */
+async function countStudents(path) {
+  try {
+    const studentData = await fs.readFile(path, 'utf8');
+    let res = '';
+    const students = studentData
+      .split('\n')
+      .filter((student) => student.length > 0)
+      .map((student) => student.split(','));
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+    students.shift();
+    res += `Number of students: ${students.length}`;
+    const filedOfStudy = {};
+    students.forEach((student) => {
+      if (!filedOfStudy[student[3]]) filedOfStudy[student[3]] = [];
+      filedOfStudy[student[3]].push(student[0]);
+    });
 
-const hostname = '127.0.0.1';
-const port = 1245;
-
-function countStudents(filename) {
-  const resolvedFilename = path.resolve(filename);
-
-  return new Promise(((resolve, reject) => {
-    if (!fs.existsSync(resolvedFilename)) {
-      reject(new Error('Cannot load the database'));
-    } else {
-      const allFileContents = fs.readFileSync(resolvedFilename, 'utf-8');
-      const lines = allFileContents.split(/\r?\n/);
-      const countDict = {};
-      let response = '';
-
-      lines.forEach((line) => {
-        const student = line.split(',');
-        const firstname = student[0];
-        const field = student[3];
-
-        if (field === 'CS' || field === 'SWE') {
-          if (field in countDict) {
-            countDict[field].push(firstname);
-          } else {
-            countDict[field] = [firstname];
-          }
-        }
-      });
-
-      // Compute and print total student count
-      let totalStudents = 0;
-      for (const field in countDict) {
-        if (Object.prototype.hasOwnProperty.call(countDict, field)) {
-          const count = countDict[field].length;
-          totalStudents += count;
-        }
-      }
-      response += `Number of students: ${totalStudents}`;
-
-      // Print individual counts for each field
-      for (const field in countDict) {
-        if (Object.prototype.hasOwnProperty.call(countDict, field)) {
-          response += `\nNumber of students in ${field}: ${countDict[field].length}. List: ${countDict[field].join(', ')}`;
-        }
-      }
-      resolve(response); // Resolve the promise with the countDict
-    }
-  }));
+    Object.keys(filedOfStudy).forEach((key) => {
+      res += `\nNumber of students in ${key}: ${
+        filedOfStudy[key].length
+      }. List: ${filedOfStudy[key].join(', ')}`;
+    });
+    return res;
+  } catch (error) {
+    throw new Error('Cannot load the database');
+  }
 }
 
-const app = http.createServer((req, res) => {
-  const { method, url } = req;
-
-  if (method === 'GET') {
-    if (url === '/') {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/plain');
+const app = http.createServer(async (req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  const msg = 'This is the list of our students';
+  switch (req.url) {
+    case '/':
       res.end('Hello Holberton School!');
-    } else if (url === '/students') {
-      res.statusCode = 200;
-      res.setHeader('content-Type', 'text/plain');
-
-      countStudents(process.argv[2])
-        .then((result) => {
-          res.write('This is the list of our students\n');
-          res.end(result);
-        })
-        .catch(() => {
-          res.statusCode = 404;
-          res.end('Cannot load the database');
-        });
-    } else {
-      res.statusCode = 404;
-      res.setHeader('Content-Type', 'text/plain');
-      res.end('Cannot load the database');
-    }
+      break;
+    case '/students':
+      try {
+        res.end(`${msg}\n${await countStudents(process.argv[2])}`);
+      } catch (error) {
+        res.statusCode = 404;
+        res.end(`${msg}\n${error.message}`);
+      }
+      break;
+    default:
+      break;
   }
 });
 
-app.listen(port, hostname, () => {});
+app.listen(1245, '127.0.0.1');
 
 module.exports = app;

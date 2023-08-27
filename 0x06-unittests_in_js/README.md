@@ -1,1 +1,1 @@
-# Unittests in JS using Mocha, Chai and SinonJ
+# Unittests in JS using Mocha, Chai and SinonJS
